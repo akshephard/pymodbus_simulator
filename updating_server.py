@@ -44,7 +44,7 @@ log.setLevel(logging.DEBUG)
 # --------------------------------------------------------------------------- #
 
 
-def updating_writer(a,registers_float,registers_int):
+def updating_writer(a,registers_float_dict,registers_int_dict):
     """ A worker process that runs every so often and
     updates live values of the context. It should be noted
     that there is a race condition for the update.
@@ -70,23 +70,66 @@ def updating_writer(a,registers_float,registers_int):
     context[slave_id].setValues(register, address, values)
 
 
-    for the_key, the_value in registers_float.items():
-        new_val = random.uniform(1.0,1000.0)
-        #new_val = 5.0
-        write_float(a,the_value,new_val)
-        print(new_val)
-        print(the_key, 'corresponds to', the_value)
-        print("here")
+    for key, reg_list in registers_float_dict.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+        if(reg_list[1] != -1):
+            write_float(a,reg_list[0],reg_list[1])
+            reg_list[1] = -1
+        elif(reg_list[2] == 'random'):
+            new_val = random.uniform(1.0,1000.0)
+            write_float(a,reg_list[0],new_val)
+        elif (reg_list[2] == 'ramp'):
+            slope = 1.0
+            print("float")
+            print("RAMP!!!!")
+            #write_float(a,reg_list[0],5.0)
+            values   = context[slave_id].getValues(register, (reg_list[0]), count=2)
+            f = unpack('f',pack('>HH',values[0],values[1]))[0]
+            print("here")
+            print(f)
+            newval = f + 1*slope
+            write_float(a,reg_list[0],newval)
+            print(newval)
 
-    for the_key, reg_address in registers_int.items():
-        #new_val = random.uniform(1.0,1000.0)
-        new_val = 5
-        #print(random(2))
-        write_32int(a,reg_address,new_val)
-        print(reg_address)
-        #print(new_val)
-        print(the_key, 'corresponds to', the_value)
-    #write_float(a,0x0,3.78)
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+    for key, reg_list in registers_int_dict.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+        if(reg_list[1] != -1):
+            write_32int(a,reg_list[0],reg_list[1])
+            reg_list[1] = -1
+        elif(reg_list[2] == 'random'):
+            new_val = random.randint(1,1000)
+            print(new_val)
+            write_32int(a,reg_list[0],new_val)
+        elif (reg_list[2] == 'ramp'):
+            slope = 1
+            print("32int")
+            #write_float(a,reg_list[0],5.0)
+            values   = context[slave_id].getValues(register, (reg_list[0]), count=2)
+            f = unpack('i',pack('>HH',values[0],values[1]))[0]
+            print("here")
+            print(f)
+            new_val = f + 1*slope
+            #write_float(a,reg_list[0],newval)
+            print(new_val)
+            write_32int(a,reg_list[0],new_val)
+
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+
+
+
 
 def write_float(context_in,address,value,slave_id=0x0):
     """ A worker process that runs every so often and
@@ -136,7 +179,10 @@ def write_32int(context_in,address,value,slave_id=0x0):
     # Floating point to two integers
     i1, i2 = unpack('>HH',pack('i',value))
     values = [i1,i2]
+    log.debug("new values: " + str(values))
     context[slave_id].setValues(register, address, values)
+
+#def interper
 
 
 
@@ -154,17 +200,17 @@ def run_updating_server(config_in, config_section=None):
 
     '''
     self.PORT = modbusConfig[modbus_section]['port']
-    self.registers_float = modbusConfig[modbus_section]['float_registers']
+    self.registers_float_dict = modbusConfig[modbus_section]['float_registers']
     print(self.PORT)
-    print(self.registers_float)
+    print(self.registers_float_dict)
     '''
     PORT = modbusConfig[modbus_section]['port']
-    registers_float = modbusConfig[modbus_section]['float_registers']
-    registers_int = modbusConfig[modbus_section]['int32_registers']
+    registers_float_dict = modbusConfig[modbus_section]['float_registers']
+    registers_int_dict = modbusConfig[modbus_section]['int32_registers']
     print(PORT)
-    print(registers_float)
-    print(len(registers_float))
-    register_size = len(registers_float)*2 + len(registers_int)*2
+    print(registers_float_dict)
+    print(len(registers_float_dict))
+    register_size = len(registers_float_dict)*2 + len(registers_int_dict)*2
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [17]*100),
         co=ModbusSequentialDataBlock(0, [17]*100),
@@ -186,8 +232,9 @@ def run_updating_server(config_in, config_section=None):
     # ----------------------------------------------------------------------- #
     # run the server you want
     # ----------------------------------------------------------------------- #
-    time = 20  
-    loop = LoopingCall(f=updating_writer, a=(context,),registers_float=(registers_float),registers_int=(registers_int))
+    #initialize_registers(context,registers_float_dict,registers_int_dict)
+    time = 5
+    loop = LoopingCall(f=updating_writer, a=(context,),registers_float_dict=(registers_float_dict),registers_int_dict=(registers_int_dict))
     loop.start(time, now=False) # initially delay by time
     StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020))
     write_float(context,0,23.73)
