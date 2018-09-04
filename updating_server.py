@@ -44,30 +44,18 @@ log.setLevel(logging.DEBUG)
 # --------------------------------------------------------------------------- #
 
 
-def updating_writer(a,registers_float_dict,registers_int_dict):
+def updating_writer(a,registers_float_dict,registers_int_dict,registers_int16_dict,coil_registers,random_range,ramp_slope):
     """ A worker process that runs every so often and
     updates live values of the context. It should be noted
     that there is a race condition for the update.
 
     :param arguments: The input arguments to the call
     """
-    log.debug("updating the context")
+    #log.debug("updating the context")
     context = a[0]
     register = 3
     slave_id = 0x00
     address = 0x0
-    # Two integers to a floating point
-    i1 = 0xC3F5
-    i2 = 0x4840
-    f = unpack('f',pack('>HH',i1,i2))[0]
-
-    # Floating point to two integers
-    i1, i2 = unpack('>HH',pack('f',3.14))
-    #values = context[slave_id].getValues(register, address, count=5)
-    #values = [v + 1 for v in values]
-    values = [i1,i2]
-    log.debug("new values: " + str(values))
-    context[slave_id].setValues(register, address, values)
 
 
     for key, reg_list in registers_float_dict.items():
@@ -75,20 +63,34 @@ def updating_writer(a,registers_float_dict,registers_int_dict):
         # config file.
         if(reg_list[1] != -1):
             write_float(a,reg_list[0],reg_list[1])
+            #context[slave_id].setValues(4, 0, [35])
+            count = 0
+            while (count < 10):
+                context[slave_id].setValues(2, count, [True])
+                count += 1
+
+            #Initialize coils to state from config file
+            for key_, reg_list_coil in coil_registers.items():
+                context[slave_id].setValues(1, reg_list_coil[0], [reg_list_coil[1]])
+
+            #set initial value to -1 to signify it has already been initialized
             reg_list[1] = -1
+            print("tester1")
         elif(reg_list[2] == 'random'):
-            new_val = random.uniform(1.0,1000.0)
+            new_val = random.uniform(random_range[0],random_range[1])
             write_float(a,reg_list[0],new_val)
+
+
         elif (reg_list[2] == 'ramp'):
-            slope = 1.0
-            print("float")
-            print("RAMP!!!!")
-            #write_float(a,reg_list[0],5.0)
-            values   = context[slave_id].getValues(register, (reg_list[0]), count=2)
-            f = unpack('f',pack('>HH',values[0],values[1]))[0]
-            print("here")
-            print(f)
-            newval = f + 1*slope
+            # TODO use settings from config file to set this slope
+            slope = ramp_slope
+            # get previous values from the two registers which combine to the
+            # float value
+            values = context[slave_id].getValues(register, (reg_list[0]), count=2)
+            #convert two short integers from register into a float value
+            previous_float_val = unpack('f',pack('>HH',values[0],values[1]))[0]
+            #Add in slope to previous value
+            newval = previous_float_val + 1*slope
             write_float(a,reg_list[0],newval)
             print(newval)
 
@@ -101,26 +103,60 @@ def updating_writer(a,registers_float_dict,registers_int_dict):
     for key, reg_list in registers_int_dict.items():
         # Go through each float register and apply the function specified by the
         # config file.
+
         if(reg_list[1] != -1):
             write_32int(a,reg_list[0],reg_list[1])
             reg_list[1] = -1
+
         elif(reg_list[2] == 'random'):
-            new_val = random.randint(1,1000)
+            new_val = random.randint(0,1000)
             print(new_val)
             write_32int(a,reg_list[0],new_val)
         elif (reg_list[2] == 'ramp'):
-            slope = 1
-            print("32int")
-            #write_float(a,reg_list[0],5.0)
-            values   = context[slave_id].getValues(register, (reg_list[0]), count=2)
-            f = unpack('i',pack('>HH',values[0],values[1]))[0]
-            print("here")
-            print(f)
-            new_val = f + 1*slope
-            #write_float(a,reg_list[0],newval)
-            print(new_val)
-            write_32int(a,reg_list[0],new_val)
+            slope = 1.0
+            # Get previous values that represent the 32 bit integer as two
+            # short integers
+            values  = context[slave_id].getValues(3, reg_list[0], count=2)
+            print(values)
+            #change short integers to 32 bit integer
 
+            previous_integer_val = unpack('i',pack('>HH',int(values[0]),int(values[1])))[0]
+
+            # Add previous value to slope
+            new_val = previous_integer_val + 1*slope
+
+            #write value back to register
+            write_32int(a,reg_list[0],int(new_val))
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+
+    for key, reg_list in registers_int16_dict.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+        print(reg_list[1])
+        if(reg_list[1] != -1):
+            context[slave_id].setValues(3, reg_list[0], [reg_list[1]])
+            reg_list[1] = -1
+
+        elif(reg_list[2] == 'random'):
+            print("RANDOM!!!")
+            new_val = random.randint(0,1000)
+            print(new_val)
+            context[slave_id].setValues(3, reg_list[0], [new_val])
+            #Swrite_32int(a,reg_list[0],new_val)
+        elif (reg_list[2] == 'ramp'):
+            slope = 1.0
+            # Get previous values that represent the 32 bit integer as two
+            # short integers
+
+            values  = context[slave_id].getValues(3, reg_list[0], count=1)
+            #print(values)
+            new_val = values[0 ]+ slope*values[0]
+            context[slave_id].setValues(3, reg_list[0], [new_val])
         elif (reg_list[2] == 'none'):
             print("value unchanged")
         else:
@@ -143,17 +179,10 @@ def write_float(context_in,address,value,slave_id=0x0):
     context = context_in[0]
     register = 3
     slave_id = 0x00
-    #address = 0x0
-    # Two integers to a floating point
-    #i1 = 0xC3F5
-    #i2 = 0x4840
-    #f = unpack('f',pack('>HH',i1,i2))[0]
 
     # Floating point to two integers
     i1, i2 = unpack('>HH',pack('f',value))
-    #i3, i4 = unpack('>HH',pack('f',value))
-    #values = context[slave_id].getValues(register, address, count=5)
-    #values = [v + 1 for v in values]
+
     values = [i1,i2]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(register, address, values)
@@ -170,16 +199,11 @@ def write_32int(context_in,address,value,slave_id=0x0):
     context = context_in[0]
     register = 3
     slave_id = 0x00
-    #address = 0x0
-    # Two integers to a floating point
-    #i1 = 0xC3F5
-    #i2 = 0x4840
-    #f = unpack('f',pack('>HH',i1,i2))[0]
-
-    # Floating point to two integers
+    print(value)
+    # 32 bit integer to two 16 bit short integers for writing to registers
     i1, i2 = unpack('>HH',pack('i',value))
+
     values = [i1,i2]
-    log.debug("new values: " + str(values))
     context[slave_id].setValues(register, address, values)
 
 #def interper
@@ -207,16 +231,34 @@ def run_updating_server(config_in, config_section=None):
     PORT = modbusConfig[modbus_section]['port']
     registers_float_dict = modbusConfig[modbus_section]['float_registers']
     registers_int_dict = modbusConfig[modbus_section]['int32_registers']
+    registers_int16_dict = modbusConfig[modbus_section]['int16_registers']
+    coil_registers = modbusConfig[modbus_section]['coil_registers']
+    random_range = modbusConfig[modbus_section]['random_range']
+    ramp_slope = modbusConfig[modbus_section]['ramp_slope']
+    print(coil_registers)
     print(PORT)
     print(registers_float_dict)
+    print(registers_int16_dict)
     print(len(registers_float_dict))
     register_size = len(registers_float_dict)*2 + len(registers_int_dict)*2
+    '''
+    bigBlock = ModbusSequentialDataBlock(0, [0]*100*4)
+
     store = ModbusSlaveContext(
-        di=ModbusSequentialDataBlock(0, [17]*100),
-        co=ModbusSequentialDataBlock(0, [17]*100),
-        hr=ModbusSequentialDataBlock(0, [0]*register_size),
-        ir=ModbusSequentialDataBlock(0, [17]*100))
+        di=bigBlock,
+        co=bigBlock,
+        hr=bigBlock,
+        ir=bigBlock)
     context = ModbusServerContext(slaves=store, single=True)
+    '''
+
+    store = ModbusSlaveContext(
+        di=ModbusSequentialDataBlock(0, [0]*100),
+        co=ModbusSequentialDataBlock(0, [0]*99),
+        hr=ModbusSequentialDataBlock(0, [0]*(register_size+100)),
+        ir=ModbusSequentialDataBlock(0, [0]*100))
+    context = ModbusServerContext(slaves=store, single=True)
+
 
     # ----------------------------------------------------------------------- #
     # initialize the server information
@@ -234,10 +276,15 @@ def run_updating_server(config_in, config_section=None):
     # ----------------------------------------------------------------------- #
     #initialize_registers(context,registers_float_dict,registers_int_dict)
     time = 5
-    loop = LoopingCall(f=updating_writer, a=(context,),registers_float_dict=(registers_float_dict),registers_int_dict=(registers_int_dict))
+    loop = LoopingCall(f=updating_writer, a=(context,),
+        registers_float_dict=(registers_float_dict),
+        registers_int_dict=(registers_int_dict),
+        registers_int16_dict=(registers_int16_dict),
+        coil_registers=(coil_registers),
+        random_range=(random_range),
+        ramp_slope=(ramp_slope))
     loop.start(time, now=False) # initially delay by time
     StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020))
-    write_float(context,0,23.73)
 
 if __name__ == "__main__":
     # read arguments passed at .py file call

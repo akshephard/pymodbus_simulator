@@ -4,14 +4,19 @@ server:
     update_time: 5
     random_range: [1,1000]
     ramp_slope: 1.0
+    coil_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
     #float_registers: {signal_strength: 0}
     #int32_registers: {test_count: 2}
     #int32_registers: {}
+    # When dealing with coil registers, initliazing 100 registers will lead to
+    # an effective address range of 0-98
+
     # For each register type you can specify a name which is the key in the dictionary
     # the value of the dictionary is a list which specifies:
     # [address, initial value, function to apply]
-    int32_registers: {test_count: [4,1,'ramp']}
-    float_registers: {signal_strength  : [0,123.456,'random'],temperature: [2,100.0,'ramp']}
+    int16_registers: {count: [106,1,'ramp']}
+    int32_registers: {test_count: [104,1,'ramp']}
+    float_registers: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
     #registers: {signal_strength:[0,32int]}
     #float_registers: {signal_strength:0}
     #float_registers: {signal_strength: 0,flow_rate: 2,net_total: 4,positive_totalizer: 6,negative_totalizer: 8,temp1: 10}
