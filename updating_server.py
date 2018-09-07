@@ -43,6 +43,242 @@ log.setLevel(logging.DEBUG)
 # define your callback process
 # --------------------------------------------------------------------------- #
 
+def write_float(context_in,register,address,value,slave_id=0x0):
+    """ A worker process that runs every so often and
+    updates live values of the context. It should be noted
+    that there is a race condition for the update.
+
+    :param arguments: The input arguments to the call
+    """
+    log.debug("updating the context")
+
+    context = context_in[0]
+    #register = 3
+    slave_id = 0x00
+
+    # Floating point to two integers
+    i1, i2 = unpack('<HH',pack('f',value))
+
+    values = [i1,i2]
+    log.debug("new values: " + str(values))
+    context[slave_id].setValues(register, address, values)
+
+def write_32int(context_in,register,address,value,slave_id=0x0):
+    """ A worker process that runs every so often and
+    updates live values of the context. It should be noted
+    that there is a race condition for the update.
+
+    :param arguments: The input arguments to the call
+    """
+    log.debug("updating the context")
+
+    context = context_in[0]
+    #register = 3
+    slave_id = 0x00
+    print(value)
+    # 32 bit integer to two 16 bit short integers for writing to registers
+    i1, i2 = unpack('<HH',pack('i',value))
+    values = [i1,i2]
+    print(values)
+    context[slave_id].setValues(register, address, values)
+
+def initialize_registers(context_in,slave_id,holding_float_dict,holding_int32_dict,
+    holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
+    coil_dict, discrete_dict):
+    #TODO update context stuff 
+    context = a[0]
+
+
+    for key, reg_list in holding_float_dict.items():
+        # Go through each float register and set to initial value
+        write_float(a,3,reg_list[0],reg_list[1])
+
+    for key, reg_list in holding_int32_dict.items():
+        # Go through each int32 register and set to initial value
+        write_32int(a,3,reg_list[0],reg_list[1])
+
+    for key, reg_list in holding_int16_dict.items():
+        # Go through each int16 register and set to initial value
+        context[slave_id].setValues(3, reg_list[0], [reg_list[1]])
+
+    for key, reg_list in input_float_dict.items():
+        # Go through each float register and set to initial value
+        write_float(a,4,reg_list[0],reg_list[1])
+
+    for key, reg_list in input_int32_dict.items():
+        # Go through each int32 register and set to initial value
+        write_32int(a,4,reg_list[0],reg_list[1])
+
+    for key, reg_list in input_int16_dict.items():
+        # Go through each int16 register and set to initial value
+        context[slave_id].setValues(4, reg_list[0], [reg_list[1]])
+
+    for key1, reg_list_coil in coil_dict.items():
+        context[slave_id].setValues(1, reg_list_coil[0], [reg_list_coil[1]])
+
+    for key2, reg_list_discrete in discrete_dict.items():
+        context[slave_id].setValues(2, reg_list_discrete[0], [reg_list_discrete[1]])
+
+
+
+
+
+
+
+def update_float_registers(context,register,slave_id,register_dict_float
+    random_range, ramp_slope):
+    #TODO figure out the context situation
+
+    for key, reg_list in register_dict_float.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+
+        if(reg_list[2] == 'random'):
+
+            new_val = random.uniform(random_range[0],random_range[1])
+            write_float(a,register,reg_list[0],new_val)
+
+
+        elif (reg_list[2] == 'ramp'):
+            print("ramp float")
+            # TODO use settings from config file to set this slope
+            slope = ramp_slope
+            # get previous values from the two registers which combine to the
+            # float value
+            values = context[slave_id].getValues(register, (reg_list[0]), count=2)
+            #convert two short integers from register into a float value
+            previous_float_val = unpack('f',pack('<HH',values[0],values[1]))[0]
+            #Add in slope to previous value
+            newval = previous_float_val + 1*slope
+            write_float(a,3,reg_list[0],newval)
+            print(newval)
+
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+def update_int32_registers(context,register,slave_id,register_dict_int32,
+    random_range, ramp_slope):
+    for key, reg_list in register_dict_int32.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+
+        values  = context[slave_id].getValues(register, reg_list[0], count=2)
+        print("here is the address")
+        print(reg_list[1])
+        print("here is the value")
+        print(values)
+        if(reg_list[1] != -1):
+            write_32int(a,register,reg_list[0],reg_list[1])
+            reg_list[1] = -1
+
+        elif(reg_list[2] == 'random'):
+            print("random 32 int")
+            new_val = random.randint(0,1000)
+            print(new_val)
+            write_32int(a,3,reg_list[0],new_val)
+        elif (reg_list[2] == 'ramp'):
+            print("ramp 32 int")
+            slope = 1.0
+            # Get previous values that represent the 32 bit integer as two
+            # short integers
+            values  = context[slave_id].getValues(register, reg_list[0], count=2)
+            print(values)
+            #change short integers to 32 bit integer
+
+            previous_integer_val = unpack('i',pack('<HH',int(values[0]),int(values[1])))[0]
+
+            # Add previous value to slope
+            new_val = previous_integer_val + 1*slope
+
+            #write value back to register
+            print(new_val)
+
+            write_32int(a,register,reg_list[0],int(new_val))
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+def update_int16_registers(context,register,slave_id,register_dict_int32,
+    random_range, ramp_slope):
+    for key, reg_list in registers_int16_dict.items():
+        # Go through each float register and apply the function specified by the
+        # config file.
+        print(reg_list[0])
+        values  = context[slave_id].getValues(register, reg_list[0], count=1)
+        print("here is new value")
+        print(values)
+        print("should be the address")
+        print(reg_list[0])
+        if(reg_list[1] != -1):
+
+            #i1 = unpack('<H',pack('H',reg_list[1]))
+            #unpack(reg_list[])
+            #print(i1)
+
+            context[slave_id].setValues(register, reg_list[0], [reg_list[1]])
+
+            reg_list[1] = -1
+
+        elif(reg_list[2] == 'random'):
+            print("RANDOM!!!")
+            new_val = random.randint(0,1000)
+            #i1 = unpack('<H',pack('H',new_val))
+            #print(new_val)
+            #print(i1)
+            context[slave_id].setValues(register, reg_list[0], [new_val])
+            #Swrite_32int(a,reg_list[0],new_val)
+        elif (reg_list[2] == 'ramp'):
+            slope = 1.0
+            # Get previous values that represent the 32 bit integer as two
+            # short integers
+
+            values  = context[slave_id].getValues(register, reg_list[0], count=1)
+            #print(values)
+            new_val = values[0] + slope*1
+            context[slave_id].setValues(register, reg_list[0], [int(new_val)])
+        elif (reg_list[2] == 'none'):
+            print("value unchanged")
+        else:
+            raise e
+        print(key, 'corresponds to', reg_list[0])
+
+def update_coil_registers(context,slave_id,coil_dict):
+
+    for key1, reg_list_coil in coil_dict.items():
+        # Go through each coil register and set the value to the opposite of the
+        # curent value if the third item of the list is set to true in the config
+        if reg_list_coil[2] == 'True':
+            print("FLIP COILS!!!")
+            value = context[slave_id].getValues(1, reg_list_coil[0], count=1)
+            print(value[0])
+            if (value[0] == 1):
+                value[0] = 0
+            else:
+                value[0]  = 1
+            print(value[0])
+            context[slave_id].setValues(1, reg_list_coil[0], [value[0]])
+
+def update_discrete_register(context,slave_id,discrete_dict):
+    for key2, reg_list_discrete in discrete_registers.items():
+        # Go through each coil register and set the value to the opposite of the
+        # curent value if the third item of the list is set to true in the config
+        if reg_list_discrete[2] == 'True':
+            print("FLIP DISCRETE!!!")
+            value = context[slave_id].getValues(2, reg_list_discrete[0], count=1)
+            print(value[0])
+            if (value[0] == 1):
+                value[0] = 0
+            else:
+                value[0]  = 1
+            print(value[0])
+            context[slave_id].setValues(2, reg_list_discrete[0], [value[0]])
+
+
 
 def updating_writer(a,registers_float_dict,registers_int_dict,registers_int16_dict,
     input_float_dict,input_int_dict,input_int16_dict,
@@ -368,46 +604,9 @@ def updating_writer(a,registers_float_dict,registers_int_dict,registers_int16_di
 
 
 
-def write_float(context_in,register,address,value,slave_id=0x0):
-    """ A worker process that runs every so often and
-    updates live values of the context. It should be noted
-    that there is a race condition for the update.
 
-    :param arguments: The input arguments to the call
-    """
-    log.debug("updating the context")
 
-    context = context_in[0]
-    #register = 3
-    slave_id = 0x00
 
-    # Floating point to two integers
-    i1, i2 = unpack('<HH',pack('f',value))
-
-    values = [i1,i2]
-    log.debug("new values: " + str(values))
-    context[slave_id].setValues(register, address, values)
-
-def write_32int(context_in,register,address,value,slave_id=0x0):
-    """ A worker process that runs every so often and
-    updates live values of the context. It should be noted
-    that there is a race condition for the update.
-
-    :param arguments: The input arguments to the call
-    """
-    log.debug("updating the context")
-
-    context = context_in[0]
-    #register = 3
-    slave_id = 0x00
-    print(value)
-    # 32 bit integer to two 16 bit short integers for writing to registers
-    i1, i2 = unpack('<HH',pack('i',value))
-    values = [i1,i2]
-    print(values)
-    context[slave_id].setValues(register, address, values)
-
-#def interper
 
 
 
@@ -451,16 +650,7 @@ def run_updating_server(config_in, config_section=None):
     print(registers_int16_dict)
     print(len(registers_float_dict))
     register_size = len(registers_float_dict)*2 + len(registers_int_dict)*2
-    '''
-    bigBlock = ModbusSequentialDataBlock(0, [0]*100*4)
 
-    store = ModbusSlaveContext(
-        di=bigBlock,
-        co=bigBlock,
-        hr=bigBlock,
-        ir=bigBlock)
-    context = ModbusServerContext(slaves=store, single=True)
-    '''
 
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0]*100),
@@ -486,6 +676,7 @@ def run_updating_server(config_in, config_section=None):
     # ----------------------------------------------------------------------- #
     #initialize_registers(context,registers_float_dict,registers_int_dict)
     time = 5
+    first_time = False
     loop = LoopingCall(f=updating_writer, a=(context,),
         registers_float_dict=(registers_float_dict),
         registers_int_dict=(registers_int_dict),

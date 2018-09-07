@@ -22,7 +22,7 @@ server:
     int32_holding: {test_count: [104,25,'ramp']}
     float_holding: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
 
-    int16_input: {count: [106,1,'none']}
+    int16_input: {count: [106,1,'ramp']}
     int32_input: {test_count: [104,1,'none']}
     float_input: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'random']}
 
