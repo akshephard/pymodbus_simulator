@@ -8,8 +8,8 @@ The server which can be ran with the command: ```python3 updating_server.py conf
 
 This python file contains the server and all related functions to run it. The functions are described below.
 
-### write_float()
-    ```write_float(context_in,register,address,value,slave_id=0x0)```
+### write_float
+    ``` write_float(context_in,register,address,value,slave_id=0x0) ```
 
 ### write_32int(context_in,register,address,value,slave_id=0x0)
     ``` 
