@@ -9,13 +9,21 @@ The server which can be ran with the command: `python3 updating_server.py config
 This python file contains the server and all related functions to run it. The functions are described below.
 
 ### write_float()
-``` write_float(context_in,register,address,value,slave_id=0x0) ```
+    ``` 
+    write_float(context_in,register,address,value,slave_id=0x0) 
+    ```
 
 ### write_32int(context_in,register,address,value,slave_id=0x0)
+    ``` 
+    write_32int(context_in,register,address,value,slave_id=0x0) 
+    ```
 
-### initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
+### initialize_registers()
+    ```
+    initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
     holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
     coil_dict, discrete_dict)
+    ```
     
 ### update_float_registers(a,register,slave_id,register_dict_float,
     random_range, ramp_slope):
