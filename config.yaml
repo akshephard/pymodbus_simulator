@@ -1,23 +1,44 @@
 server:
+    ########################## Modbus server settings #########################
+
     port: 5020
     UNIT_ID: 0x1
     update_time: 5
+
+    ######################### Register settings ###############################
+
+                            ### Random Range ###
+    # Sets the range of random values for the float32,int32,int16 holding and
+    # input registers
     random_range: [1,1000]
+
+                            ### Ramp Slope ###
+    # Sets the slope for the ramp function for the float32,int32,int16 holding and
+    # input registers
     ramp_slope: 1.0
-    # Current issue with coil registers we are depending on there being a
-    # random float for coils to be evaluated, we need to initialize the context
-    # before  getting into the server
-    coil_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
-    discrete_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
-    #float_registers: {signal_strength: 0}
-    #int32_registers: {test_count: 2}
-    #int32_registers: {}
+
+                        ### Coil/discrete registers ###
+
+    # For each coil/discrete register type you can specify a name which is the
+    # key in the dictionary. The value of the dictionary is a list which specifies:
+    # [address, initial value, turn cycle on or off]
+
+    # The third value in the list is a boolean value which determines whether
+    # the server will switch the value of the coil/discrete register. This can
+    # be useful for testing code that will be interacting with a modbus device.
+
     # When dealing with coil registers, initliazing 100 registers will lead to
     # an effective address range of 0-98
+
+    coil_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
+    discrete_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
+
+                        ### Holding/Input registers ###
 
     # For each register type you can specify a name which is the key in the dictionary
     # the value of the dictionary is a list which specifies:
     # [address, initial value, function to apply]
+
     int16_holding: {count: [106,1,'ramp']}
     int32_holding: {test_count: [104,25,'ramp']}
     float_holding: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
@@ -25,7 +46,3 @@ server:
     int16_input: {count: [106,1,'ramp']}
     int32_input: {test_count: [104,1,'none']}
     float_input: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'random']}
-
-    #registers: {signal_strength:[0,32int]}
-    #float_registers: {signal_strength:0}
-    #float_registers: {signal_strength: 0,flow_rate: 2,net_total: 4,positive_totalizer: 6,negative_totalizer: 8,temp1: 10}

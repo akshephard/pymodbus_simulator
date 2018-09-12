@@ -258,6 +258,8 @@ def update_discrete_register(a,slave_id,discrete_dict):
 def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
     input_float_dict,input_int32_dict,input_int16_dict,
     coil_dict,discrete_dict,random_range,ramp_slope):
+    #TODO automatically size the context and check for the size being too large
+
     """ A worker process that runs every so often and
     updates live values of the context. It should be noted
     that there is a race condition for the update.
@@ -270,9 +272,10 @@ def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
     slave_id = 0x00
     address = 0x0
 
-
+    # Update the coil registers type according to function specified in config
     update_coil_registers(a,slave_id,coil_dict)
 
+    # Update the discrete register type according to function specified in config
     update_discrete_register(a,slave_id,discrete_dict)
 
     # Update each holding register type according to function specified in config
@@ -324,13 +327,22 @@ def run_updating_server(config_in, config_section=None):
     random_range = modbusConfig[modbus_section]['random_range']
     ramp_slope = modbusConfig[modbus_section]['ramp_slope']
 
-    register_size = len(holding_float_dict)*2 + len(holding_int32_dict)*2
+    # Calculate size needed for each register type
+    holding_block_size = len(holding_float_dict)*2
+    holding_block_size += len(holding_int32_dict)*2
+    holding_block_size += len(holding_int16_dict)*1
 
+    input_block_size = len(input_float_dict)*2
+    input_block_size += len(input_int32_dict)*2
+    input_block_size += len(input_int16_dict)*1
+
+    discrete_block_size = len(discrete_dict)
+    coil_block_size = len(coil_dict)
 
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0]*100),
         co=ModbusSequentialDataBlock(0, [0]*99),
-        hr=ModbusSequentialDataBlock(0, [0]*(register_size+100)),
+        hr=ModbusSequentialDataBlock(0, [0]*(holding_block_size+100)),
         ir=ModbusSequentialDataBlock(0, [0]*200))
     context = ModbusServerContext(slaves=store, single=True)
 
