@@ -2,16 +2,14 @@
 
 This project is built on the [example code](https://pymodbus.readthedocs.io/en/v1.3.2/examples/updating-server.html) from the pymodbus library. The additonal features include a config file which contains the settings of the modbus server and register details. Other important features are the addition of all types of registers present in the modbus specification(coil, discrete, holding, and input). 
 
-The server which can be ran with the command: `python3 updating_server.py config.yaml`
+The server which can be ran with the command: ```python3 updating_server.py config.yaml```
 
 ## updating_server.py
 
 This python file contains the server and all related functions to run it. The functions are described below.
 
 ### write_float()
-    `
-    write_float(context_in,register,address,value,slave_id=0x0) 
-    `
+    ```write_float(context_in,register,address,value,slave_id=0x0)```
 
 ### write_32int(context_in,register,address,value,slave_id=0x0)
     ``` 
