@@ -53,7 +53,6 @@ def write_float(context_in,register,address,value,slave_id=0x0):
     log.debug("updating the context")
 
     context = context_in[0]
-    #register = 3
     slave_id = 0x00
 
     # Floating point to two integers
@@ -268,14 +267,13 @@ def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
     """
     #log.debug("updating the context")
     context = a[0]
-    #register = 3
     slave_id = 0x00
     address = 0x0
 
-    # Update the coil registers type according to function specified in config
+    # Update the coil register according to the flip boolean in the coil_dict
     update_coil_registers(a,slave_id,coil_dict)
 
-    # Update the discrete register type according to function specified in config
+    # # Update the discrete register according to the flip boolean in the discrete_dict
     update_discrete_register(a,slave_id,discrete_dict)
 
     # Update each holding register type according to function specified in config
@@ -313,6 +311,10 @@ def run_updating_server(config_in, config_section=None):
         modbusConfig = yaml.safe_load(f)
 
     PORT = modbusConfig[modbus_section]['port']
+    DEFINED_BLOCK = modbusConfig[modbus_section]['use_block_size']
+
+    random_range = modbusConfig[modbus_section]['random_range']
+    ramp_slope = modbusConfig[modbus_section]['ramp_slope']
 
     holding_float_dict = modbusConfig[modbus_section]['float_holding']
     holding_int32_dict = modbusConfig[modbus_section]['int32_holding']
@@ -324,26 +326,51 @@ def run_updating_server(config_in, config_section=None):
 
     coil_dict = modbusConfig[modbus_section]['coil_registers']
     discrete_dict = modbusConfig[modbus_section]['discrete_registers']
-    random_range = modbusConfig[modbus_section]['random_range']
-    ramp_slope = modbusConfig[modbus_section]['ramp_slope']
 
-    # Calculate size needed for each register type
-    holding_block_size = len(holding_float_dict)*2
-    holding_block_size += len(holding_int32_dict)*2
-    holding_block_size += len(holding_int16_dict)*1
+    if (DEFINED_BLOCK == True):
+        # User has defined a custom block and offset, read the settings
+        # from the config file.
 
-    input_block_size = len(input_float_dict)*2
-    input_block_size += len(input_int32_dict)*2
-    input_block_size += len(input_int16_dict)*1
+        print("block size is user defined")
+        coil_block_size = modbusConfig[modbus_section]['coil_block_size']
+        coil_block_offset = modbusConfig[modbus_section]['coil_block_offset']
 
-    discrete_block_size = len(discrete_dict)
-    coil_block_size = len(coil_dict)
+        discrete_block_size = modbusConfig[modbus_section]['discrete_block_size']
+        discrete_block_offset = modbusConfig[modbus_section]['discrete_block_offset']
+
+        holding_block_size = modbusConfig[modbus_section]['holding_block_size']
+        holding_block_offset = modbusConfig[modbus_section]['holding_block_offset']
+
+        input_block_size = modbusConfig[modbus_section]['holding_block_size']
+        input_block_offset = modbusConfig[modbus_section]['holding_block_offset']
+    else:
+        print("use auto calulcator")
+        # Calculate size needed for each register type
+        holding_block_size = len(holding_float_dict)*2
+        holding_block_size += len(holding_int32_dict)*2
+        holding_block_size += len(holding_int16_dict)*1
+
+        input_block_size = len(input_float_dict)*2
+        input_block_size += len(input_int32_dict)*2
+        input_block_size += len(input_int16_dict)*1
+
+        discrete_block_size = len(discrete_dict)
+        coil_block_size = len(coil_dict)
+
+        coil_block_offset = 0
+        discrete_block_offset = 0
+        holding_block_offset = 0
+        input_block_offset = 0
+
+
+
+
 
     store = ModbusSlaveContext(
-        di=ModbusSequentialDataBlock(0, [0]*100),
-        co=ModbusSequentialDataBlock(0, [0]*99),
-        hr=ModbusSequentialDataBlock(0, [0]*(holding_block_size+100)),
-        ir=ModbusSequentialDataBlock(0, [0]*200))
+        di=ModbusSequentialDataBlock(discrete_block_offset, [0]*discrete_block_size),
+        co=ModbusSequentialDataBlock(coil_block_offset, [0]*coil_block_size),
+        hr=ModbusSequentialDataBlock(holding_block_offset, [0]*holding_block_size),
+        ir=ModbusSequentialDataBlock(input_block_offset, [0]*input_block_size))
     context = ModbusServerContext(slaves=store, single=True)
 
 
@@ -382,6 +409,8 @@ def run_updating_server(config_in, config_section=None):
         random_range=(random_range),
         ramp_slope=(ramp_slope))
     loop.start(time, now=False) # initially delay by time
+    # Setting address to 127.0.0.1 allows only the local machine to access the
+    # Server. Changing to 0.0.0.0 allows for other hosts to connect.
     StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020))
 
 if __name__ == "__main__":

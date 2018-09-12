@@ -6,6 +6,31 @@ server:
     update_time: 5
 
     ######################### Register settings ###############################
+                            ### User defined block ###
+    # If this is set to True the block sizes can be specified in the config file
+    # If this is set to False the block sizes are automatically calculated from
+    # the amount of registers defined in the config file for each register type.
+    use_block_size: True
+
+                            ### Block size and offset ###
+    # For each register size a maximum amount of addressable registers may be
+    # specified. Additionally, an offset may also be applied for each register.
+    # If the block size is 1000 and the offset is 1000, the range for that
+    # register type would be 1000-1999. This is useful if you would like to
+    # match exact register addresses with a target device.
+
+    coil_block_size: 1000
+    coil_block_offset: 0
+    
+
+    discrete_block_size: 1000
+    discrete_block_offset: 0
+
+    holding_block_size: 1000
+    holding_block_offset: 0
+
+    input_block_size: 1000
+    input_block_offset: 0
 
                             ### Random Range ###
     # Sets the range of random values for the float32,int32,int16 holding and
