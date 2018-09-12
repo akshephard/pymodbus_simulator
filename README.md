@@ -93,7 +93,7 @@ to the register dictionaries created from the config file.
 ```
 run_updating_server(config_in, config_section=None)
 ```
-This function: parses the config file and sets the register dictionaries, initializes the registers, launches the ```updating_writer()``` function with twisted, and launches the tcp server.
+This function: parses the config file and sets the register dictionaries, initializes the registers, launches the ```updating_writer()``` function with twisted function call ```LoopingCall()```, and launches the tcp server.
 
 
 
