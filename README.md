@@ -72,7 +72,7 @@ update_coil_registers(a,slave_id,coil_dict)
 This function updates the coil registers (function code 1). The previous value can be flipped each time 
 the server is updated if specified in the coil dictionary which is generated from the config file.
 
-### update_discrete_register(a,slave_id,discrete_dict)
+### update_discrete_register()
 ```
 update_discrete_register(a,slave_id,discrete_dict)
 ```
@@ -89,7 +89,7 @@ updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
 This function runs via the twisted library every 5 seconds to update the values of the registers according
 to the register dictionaries created from the config file. 
 
-### run_updating_server(config_in, config_section=None)
+### run_updating_server()
 ```
 run_updating_server(config_in, config_section=None)
 ```
