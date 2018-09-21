@@ -97,8 +97,10 @@ def initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
         write_32int(a,3,reg_list[0],reg_list[1])
 
     for key, reg_list in holding_int16_dict.items():
-        # Go through each int16 register and set to initial value
-        context[slave_id].setValues(3, reg_list[0], [reg_list[1]])
+        # Go through each int16 register and set to initial value\
+        i1,i2 = unpack('<HH',pack('i',reg_list[1]))
+        values = [i1]
+        context[slave_id].setValues(3, reg_list[0], values)
 
     for key, reg_list in input_float_dict.items():
         # Go through each float register and set to initial value
@@ -106,6 +108,7 @@ def initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
 
     for key, reg_list in input_int32_dict.items():
         # Go through each int32 register and set to initial value
+        print("we in int32 updates")
         write_32int(a,4,reg_list[0],reg_list[1])
 
     for key, reg_list in input_int16_dict.items():
