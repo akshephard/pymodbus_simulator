@@ -2,7 +2,7 @@ server:
     ########################## Modbus server settings #########################
 
     port: 5020
-    UNIT_ID: 0x1
+    slave_id: 0x1
     update_time: 5
 
     ######################### Register settings ###############################
@@ -10,8 +10,6 @@ server:
     # If this is set to True the block sizes can be specified in the config file
     # If this is set to False the block sizes are automatically calculated from
     # the amount of registers defined in the config file for each register type.
-    # When setting the address of the registers it must be in either the
-    # automatically generated range or the user defined range.
     use_block_size: True
 
                             ### Block size and offset ###
@@ -56,7 +54,7 @@ server:
 
     # When dealing with coil registers, initliazing 100 registers will lead to
     # an effective address range of 0-98
-    registers: {signal_strength:[200,32int],flow_rate:[202,32int],net_total:[204,32int],positive_totalizer:[206,32int],negative_totalizer:[208,32int]}
+
     coil_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
     discrete_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
 
@@ -66,15 +64,10 @@ server:
     # the value of the dictionary is a list which specifies:
     # [address, initial value, function to apply]
 
-    #int16_holding: {count: [106,1,'ramp']}
-    int32_holding: {signal_strength:[200,25,random],flow_rate:[202,37,random],net_total:[204,25,random],positive_totalizer:[206,25,random],negative_totalizer:[208,25,random]}
-    #int32_holding: {test_count: [104,25,'ramp']}
-    #float_holding: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
-
-    int16_holding: {count: [106,1,'ramp']}
-    #int32_holding: {test_count: [104,25,'ramp']}
+    int16_holding: {count: [106,-10,'ramp']}
+    int32_holding: {test_count: [104,-8,'none']}
     float_holding: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
 
-    int16_input: {count: [106,1,'ramp']}
-    int32_input: {test_count: [104,1,'none']}
+    int16_input: {count: [106,-10,'none']}
+    int32_input: {test_count: [104,-10,'none']}
     float_input: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'random']}
