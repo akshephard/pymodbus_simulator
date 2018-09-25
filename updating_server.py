@@ -26,15 +26,15 @@ from pymodbus.transaction import ModbusRtuFramer, ModbusAsciiFramer
 # --------------------------------------------------------------------------- #
 from twisted.internet.task import LoopingCall
 
-# --------------------------------------------------------------------------- #
-# configure the service logging
-# --------------------------------------------------------------------------- #
 import logging
 import yaml
 import random
 import argparse
 from struct import *
 
+# --------------------------------------------------------------------------- #
+# configure the service logging
+# --------------------------------------------------------------------------- #
 logging.basicConfig()
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
@@ -44,11 +44,14 @@ log.setLevel(logging.DEBUG)
 # --------------------------------------------------------------------------- #
 
 def write_float(context_in,register,address,value,slave_id=0x0):
-    """ A worker process that runs every so often and
-    updates live values of the context. It should be noted
-    that there is a race condition for the update.
+    """ This function converts the value given to two short unsigned integers
+    in the correct format so that the registers written to can be read together
+    as one 32 bit float
 
-    :param arguments: The input arguments to the call
+    :param context_in: context containing the datastore with all registers
+    :param register: type of register, 3 for holding and 4 for input register
+    :param value: 32 bit float value to be written to target register(s)
+    :returns: Nothing
     """
     log.debug("updating the context")
 
@@ -63,11 +66,14 @@ def write_float(context_in,register,address,value,slave_id=0x0):
     context[slave_id].setValues(register, address, values)
 
 def write_32int(context_in,register,address,value,slave_id=0x0):
-    """ A worker process that runs every so often and
-    updates live values of the context. It should be noted
-    that there is a race condition for the update.
+    """ This function converts the value given to two short unsigned integers
+    in the correct format so that the registers written to can be read together
+    as one 32 bit integer
 
-    :param arguments: The input arguments to the call
+    :param context_in: context containing the datastore with all registers
+    :param register: type of register, 3 for holding and 4 for input register
+    :param value: 32 bit integer value to be written to target register(s)
+    :returns: Nothing
     """
     log.debug("updating the context")
 
@@ -81,20 +87,35 @@ def write_32int(context_in,register,address,value,slave_id=0x0):
     print(values)
     context[slave_id].setValues(register, address, values)
 
-def initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
+def initialize_registers(context_in,slave_id,holding_float_dict,holding_int32_dict,
     holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
     coil_dict, discrete_dict):
     #TODO update context stuff
-    context = a[0]
+    """ This function initializes all the registers of each type contained in
+    the config file to their specified initial value.
+
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param holding_float_dict: dictionary with all settings for 32 bit float registers
+    :param holding_int32_dict: dictionary with all settings for 32 bit int registers
+    :param holding_int16_dict: dictionary with all settings for 16 bit int registers
+    :param input_float_dict: dictionary with all settings for 32 bit float registers
+    :param input_int32_dict: dictionary with all settings for 32 bit int registers
+    :param input_int16_dict: dictionary with all settings for 16 bit int registers
+    :param coil_dict: dictionary with all settings for coil registers
+    :param discrete_dict: dictionary with all settings for discrete registers
+    :returns: Nothing
+    """
+    context = context_in[0]
 
 
     for key, reg_list in holding_float_dict.items():
         # Go through each float register and set to initial value
-        write_float(a,3,reg_list[0],reg_list[1])
+        write_float(context_in,3,reg_list[0],reg_list[1])
 
     for key, reg_list in holding_int32_dict.items():
         # Go through each int32 register and set to initial value
-        write_32int(a,3,reg_list[0],reg_list[1])
+        write_32int(context_in,3,reg_list[0],reg_list[1])
 
     for key, reg_list in holding_int16_dict.items():
         # Go through each int16 register and set to initial value\
@@ -104,12 +125,12 @@ def initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
 
     for key, reg_list in input_float_dict.items():
         # Go through each float register and set to initial value
-        write_float(a,4,reg_list[0],reg_list[1])
+        write_float(context_in,4,reg_list[0],reg_list[1])
 
     for key, reg_list in input_int32_dict.items():
         # Go through each int32 register and set to initial value
         print("we in int32 updates")
-        write_32int(a,4,reg_list[0],reg_list[1])
+        write_32int(context_in,4,reg_list[0],reg_list[1])
 
     for key, reg_list in input_int16_dict.items():
         # Go through each int16 register and set to initial value
@@ -123,6 +144,16 @@ def initialize_registers(a,slave_id,holding_float_dict,holding_int32_dict,
 
 def update_float_registers(a,register,slave_id,register_dict_float,
     random_range, ramp_slope):
+    """ This function updates all the registers of type 32float contained in
+    the config file with their specified update function
+
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param register_dict_float: dictionary with all settings for 32 bit int registers
+    :param random_range: range of random numbers to be generated as list [start,end]
+    :param ramp_slope: slope for ramp function
+    :returns: Nothing
+    """
     #TODO figure out the context situation
     print("floats?")
     context = a[0]
@@ -157,6 +188,16 @@ def update_float_registers(a,register,slave_id,register_dict_float,
 
 def update_int32_registers(a,register,slave_id,register_dict_int32,
     random_range, ramp_slope):
+    """ This function updates all the registers of type int32 contained in
+    the config file with their specified update function
+
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param register_int32_dict: dictionary with all settings for 32 bit int registers
+    :param random_range: range of random numbers to be generated as list [start,end]
+    :param ramp_slope: slope for ramp function
+    :returns: Nothing
+    """
     print("We are in the update of int32 registers")
     slope = ramp_slope
     context = a[0]
@@ -195,8 +236,17 @@ def update_int32_registers(a,register,slave_id,register_dict_int32,
 
 def update_int16_registers(a,register,slave_id,register_dict_int16,
     random_range, ramp_slope):
+    """ This function updates all the registers of type int16 contained in
+    the config file with their specified update function
 
-    #TODO FIX ISSUE IN RAMP FOR INPUT REG
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param register_int16_dict: dictionary with all settings for 32 bit int registers
+    :param random_range: range of random numbers to be generated as list [start,end]
+    :param ramp_slope: slope for ramp function
+    :returns: Nothing
+    """
+
     #print("We are in the update of int16 registers")
     context = a[0]
     slope = ramp_slope
@@ -221,9 +271,16 @@ def update_int16_registers(a,register,slave_id,register_dict_int16,
             raise e
         print(key, 'corresponds to', reg_list[0])
 
-def update_coil_registers(a,slave_id,coil_dict):
+def update_coil_registers(context_in,slave_id,coil_dict):
+    """ This function updates all the coil registers depending on their settings
+
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param coil_dict: dictionary with all settings for 32 bit int registers
+    :returns: Nothing
+    """
     print("We are in the update of discrete registers")
-    context = a[0]
+    context = context_in[0]
     for key1, reg_list_coil in coil_dict.items():
         # Go through each coil register and set the value to the opposite of the
         # curent value if the third item of the list is set to true in the config
@@ -238,11 +295,18 @@ def update_coil_registers(a,slave_id,coil_dict):
             print(value[0])
             context[slave_id].setValues(1, reg_list_coil[0], [value[0]])
 
-def update_discrete_register(a,slave_id,discrete_dict):
+def update_discrete_register(context_in,slave_id,discrete_dict):
+    """ This function updates all the coil registers depending on their settings
+
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param coil_dict: dictionary with all settings for 32 bit int registers
+    :returns: Nothing
+    """
     print("We are in the update of discrete registers")
-    context = a[0]
+    context = context_in[0]
     for key2, reg_list_discrete in discrete_dict.items():
-        # Go through each coil register and set the value to the opposite of the
+        # Go through each discrete register and set the value to the opposite of the
         # curent value if the third item of the list is set to true in the config
         if reg_list_discrete[2] == 'True':
             print("FLIP DISCRETE!!!")
@@ -260,14 +324,25 @@ def update_discrete_register(a,slave_id,discrete_dict):
 def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
     input_float_dict,input_int32_dict,input_int16_dict,
     coil_dict,discrete_dict,random_range,ramp_slope):
-    #TODO automatically size the context and check for the size being too large
 
-    """ A worker process that runs every so often and
-    updates live values of the context. It should be noted
-    that there is a race condition for the update.
+    """ This function updates all the registers of each type contained in
+    the config file to their specified initial value.
 
-    :param arguments: The input arguments to the call
+    :param context_in: context containing the datastore with all registers
+    :param slave_id: slave id for simulator will likely get rid of this...
+    :param holding_float_dict: dictionary with all settings for 32 bit float registers
+    :param holding_int32_dict: dictionary with all settings for 32 bit int registers
+    :param holding_int16_dict: dictionary with all settings for 16 bit int registers
+    :param input_float_dict: dictionary with all settings for 32 bit float registers
+    :param input_int32_dict: dictionary with all settings for 32 bit int registers
+    :param input_int16_dict: dictionary with all settings for 16 bit int registers
+    :param coil_dict: dictionary with all settings for coil registers
+    :param discrete_dict: dictionary with all settings for discrete registers
+    :param random_range: range of random numbers to be generated as list [start,end]
+    :param ramp_slope: slope for ramp function
+    :returns: Nothing
     """
+
     #log.debug("updating the context")
     context = a[0]
     slave_id = 0x00
@@ -302,9 +377,15 @@ def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
 
 
 def run_updating_server(config_in, config_section=None):
-    # ----------------------------------------------------------------------- #
-    # initialize your data store
-    # ----------------------------------------------------------------------- #
+    """ This function updates all the registers of each type contained in
+    the config file to their specified initial value.
+
+    :param config_in: YAML config file containing all settings (see example)
+    :param config_section: section settings are under
+    :returns: Nothing
+    """
+
+    # read config file
     if (config_section==None):
         modbus_section = 'server'
 
@@ -365,10 +446,9 @@ def run_updating_server(config_in, config_section=None):
         holding_block_offset = 0
         input_block_offset = 0
 
-
-
-
-
+    # ----------------------------------------------------------------------- #
+    # initialize data store according to config file
+    # ----------------------------------------------------------------------- #
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(discrete_block_offset, [0]*discrete_block_size),
         co=ModbusSequentialDataBlock(coil_block_offset, [0]*coil_block_size),
@@ -388,17 +468,13 @@ def run_updating_server(config_in, config_section=None):
     identity.ModelName = 'pymodbus Server'
     identity.MajorMinorRevision = '1.0'
 
-    # ----------------------------------------------------------------------- #
-    # run the server you want
-    # ----------------------------------------------------------------------- #
-    #initialize_registers(context,holding_float_dict,holding_int32_dict)
-
     slave_id = 0x00
-
+    # Set all registers to their initial value as specified in config file
     initialize_registers([context],slave_id,holding_float_dict,holding_int32_dict,
         holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
         coil_dict, discrete_dict)
-
+    # Set updating time and call updating writer inside a loop accorind to interval
+    # time
     time = 5
     loop = LoopingCall(f=updating_writer, a=(context,),
         holding_float_dict=(holding_float_dict),
@@ -412,6 +488,8 @@ def run_updating_server(config_in, config_section=None):
         random_range=(random_range),
         ramp_slope=(ramp_slope))
     loop.start(time, now=False) # initially delay by time
+
+
     # Setting address to 127.0.0.1 allows only the local machine to access the
     # Server. Changing to 0.0.0.0 allows for other hosts to connect.
     StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020))
@@ -426,6 +504,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     config_file = args.config
-    #print(config_file)
 
     run_updating_server(config_in=config_file)
