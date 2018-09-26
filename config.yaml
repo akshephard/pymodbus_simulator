@@ -1,9 +1,9 @@
 server:
-    ########################## Modbus server settings #########################
+    ########################## Modbus TCP server settings #########################
 
     port: 5020
-    slave_id: 0x1
-    update_time: 5
+    slave_id: 0x1 # This will set the slave id for the device
+    update_time: 10 # Time to update all registers with functions specified below
 
     ######################### Register settings ###############################
                             ### User defined block ###
@@ -22,7 +22,6 @@ server:
     coil_block_size: 1000
     coil_block_offset: 0
 
-
     discrete_block_size: 1000
     discrete_block_offset: 0
 
@@ -31,16 +30,6 @@ server:
 
     input_block_size: 1000
     input_block_offset: 0
-
-                            ### Random Range ###
-    # Sets the range of random values for the float32,int32,int16 holding and
-    # input registers
-    random_range: [1,1000]
-
-                            ### Ramp Slope ###
-    # Sets the slope for the ramp function for the float32,int32,int16 holding and
-    # input registers
-    ramp_slope: 1.0
 
                         ### Coil/discrete registers ###
 
@@ -56,18 +45,28 @@ server:
     # an effective address range of 0-98
 
     coil_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
-    discrete_registers: {status: [0,1,'True'],other_status: [47,1,'True']}
+    discrete_registers: {status: [0,0,'True'],other_status: [47,0,'True']}
 
                         ### Holding/Input registers ###
 
     # For each register type you can specify a name which is the key in the dictionary
     # the value of the dictionary is a list which specifies:
     # [address, initial value, function to apply]
-
+    # acceptable functions to apply: 'random, 'ramp', 'none'
     int16_holding: {count: [106,-10,'ramp']}
-    int32_holding: {test_count: [104,-8,'none']}
+    int32_holding: {test_count: [104,-8,'none'],more_counting: [108,-100,'ramp']}
     float_holding: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'ramp']}
 
-    int16_input: {count: [106,-10,'none']}
-    int32_input: {test_count: [104,-10,'none']}
+    int16_input: {count: [106,-10,'ramp']}
+    int32_input: {test_count: [104,-73,'ramp']}
     float_input: {signal_strength  : [100,123.456,'random'],temperature: [102,100.0,'random']}
+
+                            ### Random Range ###
+    # Sets the range of random values for the float32,int32,int16 holding and
+    # input registers
+    random_range: [1,1000]
+
+                            ### Ramp Slope ###
+    # Sets the slope for the ramp function for the float32,int32,int16 holding and
+    # input registers
+    ramp_slope: 1.0

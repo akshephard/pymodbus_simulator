@@ -55,7 +55,8 @@ def write_float(context_in,register,address,value,slave_id=0x0):
     """
     log.debug("updating the context")
 
-    context = context_in[0]
+    #context = context_in[0]
+    context = context_in
     slave_id = 0x00
 
     # Floating point to two integers
@@ -64,6 +65,7 @@ def write_float(context_in,register,address,value,slave_id=0x0):
     values = [i1,i2]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(register, address, values)
+
 
 def write_32int(context_in,register,address,value,slave_id=0x0):
     """ This function converts the value given to two short unsigned integers
@@ -77,7 +79,8 @@ def write_32int(context_in,register,address,value,slave_id=0x0):
     """
     log.debug("updating the context")
 
-    context = context_in[0]
+    #context = context_in[0]
+    context = context_in
     #register = 3
     slave_id = 0x00
     print(value)
@@ -87,7 +90,25 @@ def write_32int(context_in,register,address,value,slave_id=0x0):
     print(values)
     context[slave_id].setValues(register, address, values)
 
-def initialize_registers(context_in,slave_id,holding_float_dict,holding_int32_dict,
+def write_16int(context,register,address,value,slave_id=0x0):
+    """ This function converts the value given to two short unsigned integers
+    in the correct format so that the registers written to can be read together
+    as one 32 bit integer
+
+    :param context_in: context containing the datastore with all registers
+    :param register: type of register, 3 for holding and 4 for input register
+    :param value: 32 bit integer value to be written to target register(s)
+    :returns: Nothing
+    """
+    slave_id = 0x00
+    log.debug("updating the context")
+    # Take signed 32 bit integer and convert to two unsigned short integers
+    # throw away 16 bits (i2)
+    i1,i2 = unpack('<HH',pack('i',value))
+    context[slave_id].setValues(register, address, [i1])
+
+
+def initialize_registers(context,slave_id,holding_float_dict,holding_int32_dict,
     holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
     coil_dict, discrete_dict):
     #TODO update context stuff
@@ -106,35 +127,30 @@ def initialize_registers(context_in,slave_id,holding_float_dict,holding_int32_di
     :param discrete_dict: dictionary with all settings for discrete registers
     :returns: Nothing
     """
-    context = context_in[0]
-
-
+    slave_id = 0x15
     for key, reg_list in holding_float_dict.items():
         # Go through each float register and set to initial value
-        write_float(context_in,3,reg_list[0],reg_list[1])
+        write_float(context,3,reg_list[0],reg_list[1])
 
     for key, reg_list in holding_int32_dict.items():
         # Go through each int32 register and set to initial value
-        write_32int(context_in,3,reg_list[0],reg_list[1])
+        write_32int(context,3,reg_list[0],reg_list[1])
 
     for key, reg_list in holding_int16_dict.items():
-        # Go through each int16 register and set to initial value\
-        i1,i2 = unpack('<HH',pack('i',reg_list[1]))
-        values = [i1]
-        context[slave_id].setValues(3, reg_list[0], values)
+        # Go through each int16 register and set to initial value
+        write_16int(context,3,reg_list[0],reg_list[1])
 
     for key, reg_list in input_float_dict.items():
         # Go through each float register and set to initial value
-        write_float(context_in,4,reg_list[0],reg_list[1])
+        write_float(context,4,reg_list[0],reg_list[1])
 
     for key, reg_list in input_int32_dict.items():
         # Go through each int32 register and set to initial value
-        print("we in int32 updates")
-        write_32int(context_in,4,reg_list[0],reg_list[1])
+        write_32int(context,4,reg_list[0],reg_list[1])
 
     for key, reg_list in input_int16_dict.items():
         # Go through each int16 register and set to initial value
-        context[slave_id].setValues(4, reg_list[0], [reg_list[1]])
+        write_16int(context,4,reg_list[0],reg_list[1])
 
     for key1, reg_list_coil in coil_dict.items():
         context[slave_id].setValues(1, reg_list_coil[0], [reg_list_coil[1]])
@@ -142,7 +158,7 @@ def initialize_registers(context_in,slave_id,holding_float_dict,holding_int32_di
     for key2, reg_list_discrete in discrete_dict.items():
         context[slave_id].setValues(2, reg_list_discrete[0], [reg_list_discrete[1]])
 
-def update_float_registers(a,register,slave_id,register_dict_float,
+def update_float_registers(context,register,slave_id,register_dict_float,
     random_range, ramp_slope):
     """ This function updates all the registers of type 32float contained in
     the config file with their specified update function
@@ -154,10 +170,8 @@ def update_float_registers(a,register,slave_id,register_dict_float,
     :param ramp_slope: slope for ramp function
     :returns: Nothing
     """
-    #TODO figure out the context situation
-    print("floats?")
-    context = a[0]
-    slope = ramp_slope
+
+
     for key, reg_list in register_dict_float.items():
         # Go through each float register and apply the function specified by the
         # config file.
@@ -165,28 +179,24 @@ def update_float_registers(a,register,slave_id,register_dict_float,
         if(reg_list[2] == 'random'):
 
             new_val = random.uniform(random_range[0],random_range[1])
-            write_float(a,register,reg_list[0],new_val)
+            write_float(context,register,reg_list[0],new_val)
 
 
         elif (reg_list[2] == 'ramp'):
-            print("ramp float")
             # get previous values from the two registers which combine to the
             # float value
             values = context[slave_id].getValues(register, (reg_list[0]), count=2)
             #convert two short integers from register into a float value
             previous_float_val = unpack('f',pack('<HH',values[0],values[1]))[0]
             #Add in slope to previous value
-            newval = previous_float_val + 1*slope
-            write_float(a,register,reg_list[0],newval)
-            print(newval)
+            newval = previous_float_val + 1*ramp_slope
+            write_float(context,register,reg_list[0],newval)
 
         elif (reg_list[2] == 'none'):
             print("value unchanged")
-        else:
-            raise e
-        print(key, 'corresponds to', reg_list[0])
 
-def update_int32_registers(a,register,slave_id,register_dict_int32,
+
+def update_int32_registers(context,register,slave_id,register_dict_int32,
     random_range, ramp_slope):
     """ This function updates all the registers of type int32 contained in
     the config file with their specified update function
@@ -199,42 +209,37 @@ def update_int32_registers(a,register,slave_id,register_dict_int32,
     :returns: Nothing
     """
     print("We are in the update of int32 registers")
-    slope = ramp_slope
-    context = a[0]
+    #slope = ramp_slope
+
     for key, reg_list in register_dict_int32.items():
         # Go through each float register and apply the function specified by the
         # config file.
 
         if(reg_list[2] == 'random'):
-            #print("random 32 int")
             new_val = random.randint(random_range[0],random_range[1])
             print(new_val)
-            write_32int(a,3,reg_list[0],new_val)
-        elif (reg_list[2] == 'ramp'):
-            print("ramp 32 int")
+            write_32int(context,register,reg_list[0],new_val)
 
+        elif (reg_list[2] == 'ramp'):
             # Get previous values that represent the 32 bit integer as two
             # short integers
             values  = context[slave_id].getValues(register, reg_list[0], count=2)
-            print(values)
-            #change short integers to 32 bit integer
 
+            #change short integers to 32 bit integer
             previous_integer_val = unpack('i',pack('<HH',int(values[0]),int(values[1])))[0]
 
             # Add previous value to slope
-            new_val = previous_integer_val + 1*slope
+            new_val = previous_integer_val + 1*ramp_slope
 
             #write value back to register
-            print(new_val)
+            write_32int(context,register,reg_list[0],int(new_val))
 
-            write_32int(a,register,reg_list[0],int(new_val))
         elif (reg_list[2] == 'none'):
             print("value unchanged")
-        else:
-            raise e
+
         print(key, 'corresponds to', reg_list[0])
 
-def update_int16_registers(a,register,slave_id,register_dict_int16,
+def update_int16_registers(context,register,slave_id,register_dict_int16,
     random_range, ramp_slope):
     """ This function updates all the registers of type int16 contained in
     the config file with their specified update function
@@ -247,31 +252,32 @@ def update_int16_registers(a,register,slave_id,register_dict_int16,
     :returns: Nothing
     """
 
-    #print("We are in the update of int16 registers")
-    context = a[0]
-    slope = ramp_slope
+    #slope = ramp_slope
     for key, reg_list in register_dict_int16.items():
         # Go through each float register and apply the function specified by the
         # config file.
 
         if(reg_list[2] == 'random'):
-            print("RANDOM!!!")
             new_val = random.randint(random_range[0],random_range[1])
-            context[slave_id].setValues(register, reg_list[0], [new_val])
+            write_16int(context,register,reg_list[0],int(new_val))
+            #context[slave_id].setValues(register, reg_list[0], [new_val])
 
         elif (reg_list[2] == 'ramp'):
             # Get previous values that represent the 32 bit integer as two
             # short integers
             values  = context[slave_id].getValues(register, reg_list[0], count=1)
-            new_val = values[0] + slope*1
-            context[slave_id].setValues(register, reg_list[0], [int(new_val)])
+            # Convert value from unsigned to signed and throw away 16 bits (i2)
+            i1,i2 = unpack('<hh',pack('i',values[0]))
+
+            new_val = i1 + ramp_slope*1
+            write_16int(context,register,reg_list[0],int(new_val))
+
         elif (reg_list[2] == 'none'):
             print("value unchanged")
-        else:
-            raise e
+
         print(key, 'corresponds to', reg_list[0])
 
-def update_coil_registers(context_in,slave_id,coil_dict):
+def update_coil_registers(context,slave_id,coil_dict):
     """ This function updates all the coil registers depending on their settings
 
     :param context_in: context containing the datastore with all registers
@@ -279,23 +285,20 @@ def update_coil_registers(context_in,slave_id,coil_dict):
     :param coil_dict: dictionary with all settings for 32 bit int registers
     :returns: Nothing
     """
-    print("We are in the update of discrete registers")
-    context = context_in[0]
+    #context = context_in[0]
+    #context = context_in
     for key1, reg_list_coil in coil_dict.items():
         # Go through each coil register and set the value to the opposite of the
         # curent value if the third item of the list is set to true in the config
         if reg_list_coil[2] == 'True':
-            print("FLIP COILS!!!")
             value = context[slave_id].getValues(1, reg_list_coil[0], count=1)
-            print(value[0])
             if (value[0] == 1):
                 value[0] = 0
             else:
                 value[0]  = 1
-            print(value[0])
             context[slave_id].setValues(1, reg_list_coil[0], [value[0]])
 
-def update_discrete_register(context_in,slave_id,discrete_dict):
+def update_discrete_register(context,slave_id,discrete_dict):
     """ This function updates all the coil registers depending on their settings
 
     :param context_in: context containing the datastore with all registers
@@ -304,12 +307,12 @@ def update_discrete_register(context_in,slave_id,discrete_dict):
     :returns: Nothing
     """
     print("We are in the update of discrete registers")
-    context = context_in[0]
+    #context = context_in[0]
+    #context = context_in
     for key2, reg_list_discrete in discrete_dict.items():
         # Go through each discrete register and set the value to the opposite of the
         # curent value if the third item of the list is set to true in the config
         if reg_list_discrete[2] == 'True':
-            print("FLIP DISCRETE!!!")
             value = context[slave_id].getValues(2, reg_list_discrete[0], count=1)
             print(value[0])
             if (value[0] == 1):
@@ -320,10 +323,10 @@ def update_discrete_register(context_in,slave_id,discrete_dict):
             context[slave_id].setValues(2, reg_list_discrete[0], [value[0]])
 
 
-
-def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
-    input_float_dict,input_int32_dict,input_int16_dict,
-    coil_dict,discrete_dict,random_range,ramp_slope):
+def updating_writer(context,slave_id,holding_float_dict,holding_int32_dict,
+    holding_int16_dict,input_float_dict,input_int32_dict,
+    input_int16_dict,coil_dict,discrete_dict,random_range,
+    ramp_slope):
 
     """ This function updates all the registers of each type contained in
     the config file to their specified initial value.
@@ -344,35 +347,35 @@ def updating_writer(a,holding_float_dict,holding_int32_dict,holding_int16_dict,
     """
 
     #log.debug("updating the context")
-    context = a[0]
-    slave_id = 0x00
-    address = 0x0
-
+    #context = a[0]
+    #test_context = a[0]
+    #test_context = context
     # Update the coil register according to the flip boolean in the coil_dict
-    update_coil_registers(a,slave_id,coil_dict)
+    #update_coil_registers(a,slave_id,coil_dict)
+    update_coil_registers(context,slave_id,coil_dict)
 
     # # Update the discrete register according to the flip boolean in the discrete_dict
-    update_discrete_register(a,slave_id,discrete_dict)
+    update_discrete_register(context,slave_id,discrete_dict)
 
     # Update each holding register type according to function specified in config
-    update_float_registers(a,3,slave_id,holding_float_dict,
+    update_float_registers(context,3,slave_id,holding_float_dict,
         random_range, ramp_slope)
 
-    update_int32_registers(a,3,slave_id,holding_int32_dict,
+    update_int32_registers(context,3,slave_id,holding_int32_dict,
         random_range, ramp_slope)
 
-    update_int16_registers(a,3,slave_id,holding_int16_dict,
+    update_int16_registers(context,3,slave_id,holding_int16_dict,
         random_range, ramp_slope)
 
 
     # Update each input register type according to function specified in config
-    update_float_registers(a,4,slave_id,input_float_dict,
+    update_float_registers(context,4,slave_id,input_float_dict,
         random_range, ramp_slope)
 
-    update_int32_registers(a,4,slave_id,input_int32_dict,
+    update_int32_registers(context,4,slave_id,input_int32_dict,
         random_range, ramp_slope)
 
-    update_int16_registers(a,4,slave_id,input_int16_dict,
+    update_int16_registers(context,4,slave_id,input_int16_dict,
         random_range, ramp_slope)
 
 
@@ -396,6 +399,8 @@ def run_updating_server(config_in, config_section=None):
 
     PORT = modbusConfig[modbus_section]['port']
     DEFINED_BLOCK = modbusConfig[modbus_section]['use_block_size']
+    slave_id = modbusConfig[modbus_section]['slave_id']
+    update_time = modbusConfig[modbus_section]['update_time']
 
     random_range = modbusConfig[modbus_section]['random_range']
     ramp_slope = modbusConfig[modbus_section]['ramp_slope']
@@ -468,15 +473,15 @@ def run_updating_server(config_in, config_section=None):
     identity.ModelName = 'pymodbus Server'
     identity.MajorMinorRevision = '1.0'
 
-    slave_id = 0x00
+    #slave_id = 0x00
     # Set all registers to their initial value as specified in config file
-    initialize_registers([context],slave_id,holding_float_dict,holding_int32_dict,
+    initialize_registers(context,slave_id,holding_float_dict,holding_int32_dict,
         holding_int16_dict,input_float_dict,input_int32_dict,input_int16_dict,
         coil_dict, discrete_dict)
     # Set updating time and call updating writer inside a loop accorind to interval
     # time
-    time = 5
-    loop = LoopingCall(f=updating_writer, a=(context,),
+    time = update_time
+    loop = LoopingCall(f=updating_writer, context=(context),slave_id=(slave_id),
         holding_float_dict=(holding_float_dict),
         holding_int32_dict=(holding_int32_dict),
         holding_int16_dict=(holding_int16_dict),
