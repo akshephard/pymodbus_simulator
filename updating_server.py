@@ -1,3 +1,5 @@
+import pymodbus
+print(dir(pymodbus))
 from pymodbus.server.async import StartTcpServer
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.datastore import ModbusSequentialDataBlock
