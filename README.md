@@ -1,4 +1,7 @@
 # pymodbus_simulator
+# version info for pymodbus:
+    use python 3.6.6
+    use pymodbus 1.5.2
 
 This project is built on the [example code](https://pymodbus.readthedocs.io/en/v1.3.2/examples/updating-server.html) from the pymodbus library. The additonal features include a config file which contains the settings of the modbus server and register details. Other important features are the addition of all types of registers present in the modbus specification(coil, discrete, holding, and input). 
 
